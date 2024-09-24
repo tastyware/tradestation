@@ -12,16 +12,20 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python 3.12
-      - uses: actions/setup-python@v4
+        uses: actions/setup-python@v4
         with:
           python-version: "3.12"
       - uses: yezz123/setup-uv@v4
-      - name: Lint, type check, and test
-      - run: |
+      - name: Lint with ruff
+        run: |
           uv run ruff check tradestation/
           uv run ruff check tests/
-          uv run mypy -p tradestation
-          uv run mypy -p tests
-          uv run pytest --cov=tradestation --cov-report=term-missing tests/ --cov-fail-under=95
         env:
           TS_API_KEY: ${{ secrets.TS_API_KEY }}
+      - name: Type check with mypy
+        run: |
+          uv run mypy -p tradestation
+          uv run mypy -p tests
+      - name: Test with pytest
+        run: |
+          uv run pytest --cov=tradestation --cov-report=term-missing tests/ --cov-fail-under=95
