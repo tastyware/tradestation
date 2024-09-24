@@ -2,9 +2,9 @@ name: Python application
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
 
 jobs:
   build:
@@ -16,16 +16,12 @@ jobs:
         with:
           python-version: "3.12"
       - uses: yezz123/setup-uv@v4
-      - name: Lint with ruff
+      - name: Lint, type check, and test
       - run: |
           uv run ruff check tradestation/
           uv run ruff check tests/
-        env:
-          TS_API_KEY: ${{ secrets.TS_API_KEY }}
-      - name: Type check with mypy
-      - run: |
           uv run mypy -p tradestation
           uv run mypy -p tests
-      - name: Test with pytest
-      - run: |
           uv run pytest --cov=tradestation --cov-report=term-missing tests/ --cov-fail-under=95
+        env:
+          TS_API_KEY: ${{ secrets.TS_API_KEY }}
