@@ -1,4 +1,8 @@
-.PHONY: lint test docs
+.PHONY: install lint test docs
+
+install:
+	uv sync
+	uv pip install -e .
 
 lint:
 	uv run ruff check tradestation/
