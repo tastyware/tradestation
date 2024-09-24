@@ -16,6 +16,10 @@ jobs:
         with:
           python-version: "3.12"
       - uses: yezz123/setup-uv@v4
+      - name: Setup uv venv
+        run: |
+          uv sync
+          uv pip install .
       - name: Lint with ruff
         run: |
           uv run ruff check tradestation/
