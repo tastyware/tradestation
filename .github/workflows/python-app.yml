@@ -28,3 +28,8 @@ jobs:
       - name: Test with pytest
         run: |
           uv run pytest --cov=tradestation --cov-report=term-missing tests/ --cov-fail-under=95
+        env:
+          TS_API_KEY: ${{ secrets.TS_API_KEY }}
+          TS_SECRET_KEY: ${{ secrets.TS_SECRET_KEY }}
+          TS_REFRESH: ${{ secrets.TS_REFRESH }}
+          TS_ACCOUNT: ${{ secrets.TS_ACCOUNT }}
