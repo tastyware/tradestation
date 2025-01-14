@@ -29,9 +29,15 @@ def validate_response(response: Response) -> None:
     """
     if response.status_code // 100 != 2:
         data = response.json()
-        raise TradestationError(f"{data['error']}: {data['error_description']}")
+        if "error" in data:
+            raise TradestationError(f"{data['error']}: {data['error_description']}")
+        else:
+            raise TradestationError(f"{data['Error']}: {data['Message']}")
 
 
-def _validate_and_parse(response: Response) -> Any:
+def validate_and_parse(response: Response) -> Any:
+    """
+    Validates a response, then returns its content as parsed JSON.
+    """
     validate_response(response)
     return response.json()

@@ -32,6 +32,6 @@ logger.setLevel(logging.DEBUG)
 # ruff: noqa: E402
 
 from .account import Account
-from .session import Session
+from .session import AutoRefreshSession, Session
 
-__all__ = ["Account", "Session"]
+__all__ = ["Account", "AutoRefreshSession", "Session"]

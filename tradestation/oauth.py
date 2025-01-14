@@ -3,7 +3,6 @@
 # token and an initial access token using v3 of the Web API.
 
 import re
-import sys
 from typing import Any
 import webbrowser
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -287,7 +286,7 @@ def response_page(
 
 
 class RequestHandler(BaseHTTPRequestHandler):
-    def do_GET(self) -> None:
+    def do_GET(self) -> None:  # pragma: no cover
         # Serve root page with sign in link
         if self.path == "/":
             self.send_response(200)
@@ -333,7 +332,7 @@ class RequestHandler(BaseHTTPRequestHandler):
 
                 token_page = response_page(refresh_token, access_token, token_access)
                 self.wfile.write(token_page)
-                sys.exit(0)
+                return
 
             else:
                 self.send_response(400)

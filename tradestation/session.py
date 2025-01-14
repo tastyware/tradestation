@@ -1,4 +1,6 @@
+import asyncio
 import json
+from random import randrange
 from typing import Any
 
 import httpx
@@ -7,8 +9,7 @@ from httpx import AsyncClient, Client
 from typing_extensions import Self
 
 from tradestation import API_URL_SIM, API_URL_V2, API_URL_V3, OAUTH_URL, logger
-from tradestation.account import Account
-from tradestation.utils import TradestationError, _validate_and_parse, validate_response
+from tradestation.utils import TradestationError, validate_and_parse, validate_response
 
 
 class Session:
@@ -20,7 +21,7 @@ class Session:
     :param secret_key: Tradestation secret key (client secret)
     :param refresh_token:
         Tradestation refresh token used to obtain new access tokens; can be
-        acquired initially by calling :any:`tradestation.oauth.login`
+        acquired initially by calling :func:`tradestation.oauth.login`
     :param access_token:
         previously generated access token; if absent, refresh token will be
         used to generate a new one automatically
@@ -38,6 +39,7 @@ class Session:
         refresh_token: str,
         access_token: str | None = None,
         id_token: str | None = None,
+        token_lifetime: int = 1200,
         is_test: bool = False,
         use_v2: bool = False,
     ):
@@ -63,6 +65,9 @@ class Session:
         self.refresh_token = refresh_token
         #: ID token containing personal info like name, email
         self.id_token = id_token
+        #: Lifetime, in seconds, of access tokens before they expire
+        #: Defaults to 20 minutes
+        self.token_lifetime = token_lifetime
 
         #: Whether this is a simulated or real session
         self.is_test = is_test
@@ -82,11 +87,36 @@ class Session:
 
     async def _a_get(self, url, **kwargs) -> Any:
         response = await self.async_client.get(url, **kwargs)
-        return _validate_and_parse(response)
+        return validate_and_parse(response)
 
     def _get(self, url, **kwargs) -> Any:
         response = self.sync_client.get(url, **kwargs)
-        return _validate_and_parse(response)
+        return validate_and_parse(response)
+
+    async def a_refresh(self) -> None:
+        """
+        Refreshes the acccess token using the stored refresh token.
+        """
+        async with AsyncClient() as client:
+            response = await client.post(
+                f"{OAUTH_URL}/oauth/token",
+                data={
+                    "grant_type": "refresh_token",
+                    "client_id": self.api_key,
+                    "client_secret": self.secret_key,
+                    "refresh_token": self.refresh_token,
+                },
+            )
+            data: dict[str, str] = validate_and_parse(response)
+            # update the relevant tokens
+            self.access_token = data["access_token"]
+            self.id_token = data["id_token"]
+            self.token_lifetime = int(data.get("expires_in", 1200))
+            logger.debug(f"Refreshed token, expires in {self.token_lifetime} seconds.")
+            auth_headers = {"Authorization": f"Bearer {self.access_token}"}
+            # update the httpx clients with the new token
+            self.sync_client.headers.update(auth_headers)
+            self.async_client.headers.update(auth_headers)
 
     def refresh(self) -> None:
         """
@@ -101,18 +131,34 @@ class Session:
                 "refresh_token": self.refresh_token,
             },
         )
-        data: dict[str, str] = _validate_and_parse(response)
+        data: dict[str, str] = validate_and_parse(response)
         # update the relevant tokens
         self.access_token = data["access_token"]
         self.id_token = data["id_token"]
-        expires_in = data.get("expires_in", "?")
-        logger.debug(f"Refreshed token, expires in {expires_in} seconds.")
+        self.token_lifetime = int(data.get("expires_in", 1200))
+        logger.debug(f"Refreshed token, expires in {self.token_lifetime} seconds.")
         auth_headers = {"Authorization": f"Bearer {self.access_token}"}
         # update the httpx clients with the new token
         self.sync_client.headers.update(auth_headers)
         self.async_client.headers.update(auth_headers)
 
-    def revoke(self) -> None:
+    async def a_revoke(self) -> None:  # pragma: no cover
+        """
+        Revokes all valid refresh tokens.
+        """
+        async with AsyncClient() as client:
+            response = await client.post(
+                f"{OAUTH_URL}/oauth/revoke",
+                data={
+                    "client_id": self.api_key,
+                    "client_secret": self.secret_key,
+                    "token": self.refresh_token,
+                },
+            )
+            validate_response(response)
+            logger.debug("Successfully revoked refresh tokens!")
+
+    def revoke(self) -> None:  # pragma: no cover
         """
         Revokes all valid refresh tokens.
         """
@@ -166,10 +212,55 @@ class Session:
             return {}
         return jwt.decode(self.id_token, options={"verify_signature": False})
 
-    def get_accounts(self) -> list[Account]:
-        data = self._get("/brokerage/accounts")
-        return [Account(**item) for item in data["Accounts"]]
 
-    async def a_get_accounts(self) -> list[Account]:
-        data = await self._a_get("/brokerage/accounts")
-        return [Account(**item) for item in data["Accounts"]]
+class AutoRefreshSession(Session):
+    """
+    A special session that automatically refreshes the access token before
+    expiration. It should always be initialized as an async context manager,
+    or by awaiting it, since the object cannot be fully instantiated without
+    async.
+
+    Example usage::
+
+        from tradestation import AutoRefreshSession
+
+        async with AutoRefreshSession(api_key, secret_key, refresh_token) as session:
+            # ...
+
+    Or::
+
+        session = await AutoRefreshSession(api_key, secret_key, refresh_token)
+        # ...
+        await session.close()
+
+    """
+
+    async def __aenter__(self):
+        self._auto_refresh_task = asyncio.create_task(self._auto_refresh())
+        return self
+
+    def __await__(self):
+        return self.__aenter__().__await__()
+
+    async def __aexit__(self, *exc):
+        await self.close()
+
+    async def close(self) -> None:
+        """
+        Closes the auto-refresh task.
+        """
+        self._auto_refresh_task.cancel()
+        await self._auto_refresh_task
+
+    async def _auto_refresh(self) -> None:
+        # infinite loop
+        while True:
+            try:
+                # renewal happens between 30 and 60 seconds before token expiration;
+                # this helps reduce the likelihood of many refreshes simultaneously
+                delay = max(1, self.token_lifetime - randrange(30, 60))
+                await asyncio.sleep(delay)
+                await self.a_refresh()
+            except asyncio.CancelledError:
+                logger.debug("Auto-refresh task cancelled, exiting gracefully.")
+                return
