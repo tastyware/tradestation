@@ -16,6 +16,9 @@ A simple, unofficial, sync/async SDK for Tradestation built on their public API.
 - Comprehensive documentation
 - Utility functions for timezone calculations, futures monthly expiration dates, and more
 
+> [!NOTE]
+> Do you use Tastytrade? We also built a [SDK](https://github.com/tastyware/tradestation) for Tastytrade users, with many of the same features!
+
 ## Installation
 
 ```console

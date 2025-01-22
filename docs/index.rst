@@ -28,6 +28,7 @@ A simple, sync/async SDK for TradeStation built on their public API. This will a
 
    installation
    sessions
+   oauth
    sync-async
 
 .. toctree::

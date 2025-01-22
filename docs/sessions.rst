@@ -12,6 +12,7 @@ Tradestation uses OAuth for secure authentication to the API. In order to obtain
    login()
 
 This will let you authenticate in your local browser. Fortunately, this only needs to be done once, as afterwards you can use the refresh token to obtain new access tokens indefinitely.
+If you need to do this yourself, check out :doc:`../oauth`.
 
 Creating a session
 ------------------

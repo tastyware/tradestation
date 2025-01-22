@@ -20,53 +20,13 @@ SCOPES = " ".join(OAUTH_SCOPES)
 
 
 class Credentials(BaseModel):
-    key: str = ""
-    secret: str = ""
+    api_key: str
+    secret_key: str
+    redirect_uri: str = REDIRECT_URI
     scopes: str = SCOPES
 
-    def clear(self) -> None:
-        self.key = ""
-        self.secret = ""
-        self.scopes = SCOPES
 
-
-credentials = Credentials()
-
-
-def get_access_url(credentials: Credentials) -> str:
-    query_string = "&".join(
-        [
-            "response_type=code",
-            f"audience={AUDIENCE}",
-            f"redirect_uri={REDIRECT_URI}",
-            f"client_id={credentials.key}",
-            f"scope={credentials.scopes}",
-        ]
-    )
-    access_url = f"{OAUTH_URL}/authorize?{query_string}"
-    return access_url
-
-
-def convert_auth_code(credentials: Credentials, auth_code: str) -> dict[str, Any]:
-    """
-    Uses an api key, a secret key and authorization code to obtain a response
-    containing an access token, refresh token, user id, and expriation time
-    """
-    post_data = {
-        "grant_type": "authorization_code",
-        "client_id": credentials.key,
-        "client_secret": credentials.secret,
-        "redirect_uri": REDIRECT_URI,
-        "code": auth_code,
-    }
-    headers = {"Content-Type": "application/x-www-form-urlencoded"}
-    response = httpx.post(f"{OAUTH_URL}/oauth/token", headers=headers, data=post_data)
-    if response.status_code != 200:
-        raise Exception(
-            "Could not load access and refresh tokens from authorization code!"
-        )
-
-    return response.json()
+credentials = Credentials(api_key="", secret_key="")
 
 
 root_page: bytes = f"""
@@ -285,6 +245,42 @@ def response_page(
 </html>""".encode("utf-8")
 
 
+def get_access_url(credentials: Credentials) -> str:
+    query_string = "&".join(
+        [
+            "response_type=code",
+            f"audience={AUDIENCE}",
+            f"redirect_uri={credentials.redirect_uri}",
+            f"client_id={credentials.api_key}",
+            f"scope={credentials.scopes}",
+        ]
+    )
+    access_url = f"{OAUTH_URL}/authorize?{query_string}"
+    return access_url
+
+
+def convert_auth_code(credentials: Credentials, auth_code: str) -> dict[str, Any]:
+    """
+    Uses an api key, a secret key and authorization code to obtain a response
+    containing an access token, refresh token, user id, and expriation time
+    """
+    post_data = {
+        "grant_type": "authorization_code",
+        "client_id": credentials.api_key,
+        "client_secret": credentials.secret_key,
+        "redirect_uri": REDIRECT_URI,
+        "code": auth_code,
+    }
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+    response = httpx.post(f"{OAUTH_URL}/oauth/token", headers=headers, data=post_data)
+    if response.status_code != 200:
+        raise Exception(
+            "Could not load access and refresh tokens from authorization code!"
+        )
+
+    return response.json()
+
+
 class RequestHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:  # pragma: no cover
         # Serve root page with sign in link
@@ -301,8 +297,8 @@ class RequestHandler(BaseHTTPRequestHandler):
             query = urlparse(self.path).query
             query_components = dict(qc.split("=") for qc in query.split("&"))
 
-            credentials.key = query_components["apiKey"]
-            credentials.secret = query_components["apiSecret"]
+            credentials.api_key = query_components["apiKey"]
+            credentials.secret_key = query_components["apiSecret"]
             credentials.scopes = query_components["scopes"].replace("+", "%20")
 
             # Redirect to login page using API key submitted by user
@@ -316,12 +312,13 @@ class RequestHandler(BaseHTTPRequestHandler):
             # Check if query path contains case insensitive "code="
             code_match = re.search(r"code=(.+)", self.path, re.I)
 
-            if code_match and credentials.key and credentials.secret:
+            if code_match and credentials.api_key and credentials.secret_key:
                 user_auth_code = code_match[1]
                 token_access = convert_auth_code(credentials, user_auth_code)
 
                 # Clear stored info
-                credentials.clear()
+                credentials.api_key = ""
+                credentials.secret_key = ""
 
                 access_token = token_access["access_token"]
                 refresh_token = token_access["refresh_token"]

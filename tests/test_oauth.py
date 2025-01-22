@@ -11,14 +11,14 @@ from tradestation.oauth import (
 
 
 def test_get_access_url():
-    credentials = Credentials(key="test")
+    credentials = Credentials(api_key="test", secret_key="")
     url = get_access_url(credentials)
     assert "test" in url
 
 
 def test_convert_auth_code():
     with pytest.raises(Exception):
-        convert_auth_code(Credentials(), "bogus")
+        convert_auth_code(Credentials(api_key="", secret_key=""), "bogus")
 
 
 def test_response_page():
