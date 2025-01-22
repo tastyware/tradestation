@@ -1,5 +1,5 @@
-sync/async
-==========
+Using sync/async
+================
 
 After creating a session (which is always initialized synchronously), the rest of the API endpoints implemented in the SDK have both sync and async implementations.
 

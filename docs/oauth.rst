@@ -1,4 +1,4 @@
-oauth
+OAuth
 =====
 
 Unless you're creating a web app with an option for a TradeStation login, you can probably skip this section!
@@ -52,7 +52,7 @@ Here's a simple example of how you could do this on your own server, using `Fast
 
         uvicorn.run(app, host="0.0.0.0", port=3001)
 
-.. note:
+.. note::
    If you run into a CSRF error, it probably has to do with your session state! Try clearing your browser cookies or testing in an incognito window.
 
 That should be enough to get you started!
