@@ -5,6 +5,8 @@
 import os
 import sys
 
+from tradestation import VERSION
+
 sys.path.insert(0, os.path.abspath(".."))
 
 # -- Project information -----------------------------------------------------
@@ -13,7 +15,7 @@ sys.path.insert(0, os.path.abspath(".."))
 project = "tradestation"
 copyright = "2025, tastyware"
 author = "Graeme Holliday, Ethan Corgatelli"
-release = "0.2"
+release = VERSION
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

@@ -1180,7 +1180,6 @@ wheels = [
 
 [[package]]
 name = "tradestation"
-version = "0.2"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },
