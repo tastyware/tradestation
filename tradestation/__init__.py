@@ -24,8 +24,9 @@ OAUTH_SCOPES = [
     "email",
 ]
 OAUTH_URL = "https://signin.tradestation.com"
-VERSION = "0.2"
+VERSION = "0.3.0"
 
+__version__ = VERSION
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 

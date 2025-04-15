@@ -5,7 +5,7 @@ from tradestation import Account, Session
 
 @fixture(scope="module")
 def accounts(session: Session) -> list[Account]:
-    return Account.get_accounts(session)
+    return Account.get(session)
 
 
 def test_get_accounts(accounts: list[Account]):
@@ -13,7 +13,7 @@ def test_get_accounts(accounts: list[Account]):
 
 
 async def test_get_accounts_async(session: Session):
-    accounts = await Account.a_get_accounts(session)
+    accounts = await Account.a_get(session)
     assert accounts != []
 
 

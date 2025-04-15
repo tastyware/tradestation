@@ -85,12 +85,12 @@ class Account(TradestationModel):
     status: str
 
     @classmethod
-    def get_accounts(cls, session: Session) -> list[Self]:
+    def get(cls, session: Session) -> list[Self]:
         data = session._get("/brokerage/accounts")
         return [cls(**item) for item in data["Accounts"]]
 
     @classmethod
-    async def a_get_accounts(cls, session: Session) -> list[Self]:
+    async def a_get(cls, session: Session) -> list[Self]:
         data = await session._a_get("/brokerage/accounts")
         return [cls(**item) for item in data["Accounts"]]
 

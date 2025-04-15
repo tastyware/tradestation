@@ -1,5 +1,5 @@
 from typing import Any
-from httpx._models import Response
+from httpx._models import Response  # type: ignore
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_pascal
 
